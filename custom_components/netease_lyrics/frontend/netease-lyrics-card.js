@@ -1,5 +1,5 @@
 console.info(
-  '%c ♪ Lyrics %c v1.2.0 ',
+  '%c ♪ Lyrics %c v1.2.1 ',
   'color: white; background: linear-gradient(90deg, #1DB954, rgb(29, 45, 185)); font-weight: bold; padding: 3px 6px; border-radius: 3px 0 0 3px; font-size: 10px; text-shadow: 0px 1px 0px rgba(0,0,0,0.2);',
   'color: white; background: #333; font-weight: bold; padding: 3px 6px; border-radius: 0 3px 3px 0; font-size: 10px;'
 );
@@ -46,7 +46,8 @@ import {
       _showFontSizeSlider: { type: Boolean },
       _lyricFontSize: { type: Number },
       _lyricFontSizeActive: { type: Number },
-      _longPressTimer: { type: Object }
+      _longPressTimer: { type: Object },
+      _showArtistInfo: { type: Boolean }
       };
     }
   
@@ -79,6 +80,8 @@ import {
     this._lyricFontSizeActive = this._loadLyricFontSizeActive();
     this._longPressTimer = null;
     this._bindLyricsFontSizeEvents();
+    this._toggleArtistInfoInterval = null;
+    this._showArtistInfo = true;
   }
 
   _checkFixedHeight() {
@@ -130,6 +133,7 @@ import {
       show_karaoke: config.show_karaoke ?? true,
       show_floating_lyrics: config.show_floating_lyrics ?? false,
       hide_lyrics_container: config.hide_lyrics_container ?? false,
+      show_player_name: config.show_player_name ?? false,  // 添加显示播放器名称配置
       grid_options: config.grid_options ?? { columns: 12, rows: 6 },
       view_layout: config.view_layout ?? {},
       max_height: config.max_height ?? 450,
@@ -139,6 +143,8 @@ import {
     this._useFixedHeight = this._shouldUseFixedHeight();
     this._lyricFontSize = this._loadLyricFontSize() || this.config.lyric_font_size;
     this._lyricFontSizeActive = this._loadLyricFontSizeActive() || (this.config.lyric_font_size + 2);
+    this._toggleArtistInfoInterval = null;
+    this._showArtistInfo = true;
   }
 
   updateCurrentLyricIndex(currentTime) {
@@ -302,6 +308,20 @@ import {
             }
           }
         });
+
+        if (this.config.show_player_name) {
+          if (this._toggleArtistInfoInterval === null) {
+            this._showArtistInfo = true;
+            this._toggleArtistInfoInterval = setInterval(() => {
+              this._showArtistInfo = !this._showArtistInfo;
+              this.requestUpdate();
+            }, 6000); 
+          }
+        } else if (this._toggleArtistInfoInterval !== null) {
+          clearInterval(this._toggleArtistInfoInterval);
+          this._toggleArtistInfoInterval = null;
+          this._showArtistInfo = true;
+        }
       }
     }
   }
@@ -329,8 +349,13 @@ import {
     disconnectedCallback() {
       super.disconnectedCallback();
       this.stopTimer();
-    document.removeEventListener('visibilitychange', this._visibilityHandler);
-  }
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+      
+      if (this._toggleArtistInfoInterval) {
+        clearInterval(this._toggleArtistInfoInterval);
+        this._toggleArtistInfoInterval = null;
+      }
+    }
 
   async fetchLyrics(title, artist) {
     try {
@@ -611,14 +636,18 @@ import {
     render() {
       const state = this.hass.states[this.config.entity];
     
-      const heightStyle = this._useFixedHeight ? `max-height: ${this.config.max_height}px; overflow-y: auto;` : '';
+      const heightStyle = this.config.hide_lyrics_container 
+        ? 'height: auto; max-height: none; overflow: visible;' 
+        : (this.config.grid_options && this.config.grid_options.rows 
+          ? `height: ${this.config.grid_options.rows * 50}px; overflow: hidden;` 
+          : `max-height: ${this.config.max_height}px; height: auto;`);
       
       if (!state) {
         return html`
           <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
             '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
             '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
-            class="${this._useFixedHeight ? 'fixed-height' : ''}">
+            class="lyrics-card ${this.config.hide_lyrics_container ? 'lyrics-hidden' : ''}">
             <div class="empty-state">
               <ha-icon icon="mdi:help-circle-outline" class="empty-state-icon"></ha-icon>
               <div class="empty-state-text">
@@ -644,7 +673,7 @@ import {
         <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
-          class="${this._useFixedHeight ? 'fixed-height' : ''}">
+          class="lyrics-card ${this.config.hide_lyrics_container ? 'lyrics-hidden' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -661,7 +690,10 @@ import {
                       class="cover-image"
                       style="background-image: url(${state.attributes.entity_picture})"
                     ></div>
-                    <div class="progress-ring" style="--progress: 0"></div>
+                    <div 
+                      class="progress-ring"
+                      style="--progress: ${currentPosition / duration}"
+                    ></div>
                   </div>
                 ` : ''}
                 <div class="song-info">
@@ -669,7 +701,15 @@ import {
                     <div class="title">未播放</div>
                   </div>
                   <div class="artist-container">
-                    <div class="artist">等待播放</div>
+                    ${state.attributes.media_artist ? html`
+                      <div class="artist-info-toggle">
+                        <div class="artist">
+                          ${state.attributes.media_artist}
+                        </div>
+                      </div>
+                    ` : html`
+                      <div class="artist">未知艺术家</div>
+                    `}
                   </div>
                 </div>
                 <div class="media-controls">
@@ -726,7 +766,7 @@ import {
       <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
-          class="${this._useFixedHeight ? 'fixed-height' : ''}">
+          class="lyrics-card ${this.config.hide_lyrics_container ? 'lyrics-hidden' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -753,8 +793,19 @@ import {
               <div class="title">${state.attributes.media_title || "未知歌曲"}</div>
                 </div>
                 <div class="artist-container">
-              <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
-            </div>
+                  ${this.config.show_player_name ? html`
+                    <div class="artist-info-toggle">
+                      <div class="artist ${!this._showArtistInfo ? 'hidden' : ''}">
+                        ${state.attributes.media_artist || "未知艺术家"}
+                      </div>
+                      <div class="player-name ${this._showArtistInfo ? 'hidden' : ''}">
+                        ${this.hass.states[this.config.entity].attributes.friendly_name || this.config.entity.split('.')[1]}
+                      </div>
+                    </div>
+                  ` : html`
+                    <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+                  `}
+                </div>
           </div>
               <div class="media-controls">
                 <button 
@@ -801,7 +852,7 @@ import {
         <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
-          class="${this._useFixedHeight ? 'fixed-height' : ''}">
+          class="lyrics-card ${this.config.hide_lyrics_container ? 'lyrics-hidden' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -828,7 +879,18 @@ import {
                   <div class="title">${state.attributes.media_title || "未知歌曲"}</div>
                 </div>
                 <div class="artist-container">
-                  <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+                  ${this.config.show_player_name ? html`
+                    <div class="artist-info-toggle">
+                      <div class="artist ${!this._showArtistInfo ? 'hidden' : ''}">
+                        歌手: ${state.attributes.media_artist || "未知艺术家"}
+                      </div>
+                      <div class="player-name ${this._showArtistInfo ? 'hidden' : ''}">
+                        设备: ${this.hass.states[this.config.entity].attributes.friendly_name || this.config.entity.split('.')[1]}
+                      </div>
+                    </div>
+                  ` : html`
+                    <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+                  `}
                 </div>
               </div>
               <div class="media-controls">
@@ -880,7 +942,7 @@ import {
       <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
         '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
         '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
-        class="${this._useFixedHeight ? 'fixed-height' : ''}">
+        class="lyrics-card ${this.config.hide_lyrics_container ? 'lyrics-hidden' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -908,7 +970,18 @@ import {
                     <div class="title">${state.attributes.media_title || "未知歌曲"}</div>
                   </div>
                   <div class="artist-container">
-                    <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+                    ${this.config.show_player_name ? html`
+                      <div class="artist-info-toggle">
+                        <div class="artist ${!this._showArtistInfo ? 'hidden' : ''}">
+                          歌手: ${state.attributes.media_artist || "未知艺术家"}
+                        </div>
+                        <div class="player-name ${this._showArtistInfo ? 'hidden' : ''}">
+                          设备: ${this.hass.states[this.config.entity].attributes.friendly_name || this.config.entity.split('.')[1]}
+                        </div>
+                      </div>
+                    ` : html`
+                      <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+                    `}
                   </div>
                 </div>
                 <div class="media-controls">
@@ -1049,6 +1122,9 @@ import {
                      sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
                      "Segoe UI Symbol", "Noto Color Emoji";
         --card-max-height: 400px;
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
       }
       
         :host {
@@ -1057,7 +1133,7 @@ import {
         }
         ha-card {
         padding: 8px 16px;
-        height: ${unsafeCSS('var(--card-height, 100%)')};
+        height: ${unsafeCSS('var(--card-height, auto)')};
         min-height: ${unsafeCSS('var(--card-min-height, auto)')};
         width: ${unsafeCSS(window.location.pathname.includes("config/dashboard") ? `${previewHeight}px` : 'auto')};
           overflow: hidden;
@@ -1117,7 +1193,7 @@ import {
 
       .header-container {
           flex-shrink: 0;
-        padding: 8px 0px 12px 0px;
+        padding: 8px 0px 10px 0px;
         border-bottom: ${unsafeCSS('var(--show-border, 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12))')};
       }
 
@@ -1146,7 +1222,20 @@ import {
         gap: 12px;
         align-items: center;
         height: 52px;
-        padding: 0 16px;
+        padding: 0 16px; 
+      }
+      
+      @media (max-width: 600px) {
+        .card-header {
+          padding: 0 12px;
+          gap: 10px; 
+        }
+        .lyrics-hidden .header-container {
+            padding: 0;
+        }  
+        .media-controls {
+          gap: 3px; 
+        }
       }
 
         .song-info {
@@ -1180,6 +1269,9 @@ import {
         flex: 0 1 auto;
         width: 100%;
         text-align: left;
+        position: relative;
+        z-index: 1;
+        min-height: 16px;
       }
 
         .title {
@@ -1389,7 +1481,7 @@ import {
         grid-area: controls;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
       }
 
       .control-button {
@@ -1424,6 +1516,9 @@ import {
         
         .song-info {
           padding: 0 8px;
+        }
+        .media-controls {
+          gap: 3px; 
         }
       }
 
@@ -1763,16 +1858,111 @@ import {
       .lyrics-container.fixed-height::-webkit-scrollbar-track {
         background: transparent;
       }
+      
+      ha-card.lyrics-hidden {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+      }
+      
+      .lyrics-hidden .header-container {
+        padding: 8px 0;
+        border-bottom: none;
+      }
+      
+      .lyrics-hidden .card-container {
+        height: auto !important;
+      }
+      
+      .lyrics-hidden .card-header {
+        justify-content: center;
+      }
+      
+      .lyrics-hidden .cover-image-container {
+        width: 3rem;
+        height: 3rem;
+      }
+      
+      .lyrics-hidden .song-info {
+        text-align: center;
+        align-items: center;
+      }
+
+      .lyrics-hidden .card-background {
+        filter: blur(18px); 
+        transform: scale(0.98); 
+        opacity: 0.25; 
+      }
+      
+      .lyrics-hidden .header-container {
+        padding: 12px 0px 12px 0px;
+        border-bottom: none;
+      }
+      
+      .lyrics-hidden .card-header {
+        height: 42px; 
+      }
+      
+      .artist-info-toggle {
+        position: relative;
+        height: 16px;
+        overflow: visible; 
+        z-index: 2;
+      }
+      
+      .artist-info-toggle .artist,
+      .artist-info-toggle .player-name {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 16px;
+        line-height: 16px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: opacity 0.8s ease, filter 0.8s ease, transform 0.8s ease;
+        backface-visibility: hidden;
+        transform-origin: left center;
+        will-change: opacity, filter, transform;
+      }
+      
+      .artist-info-toggle .artist.hidden,
+      .artist-info-toggle .player-name.hidden {
+        opacity: 0;
+        filter: blur(2px); 
+        transform: scale(0.90);
+        pointer-events: none;
+      }
+      
+      .artist-info-toggle .artist,
+      .artist-info-toggle .player-name {
+        opacity: 1;
+        filter: blur(0); 
+        transform: scale(1);
+      }
+      
+      .artist-info-toggle .player-name {
+        font-size: 12px;
+        font-family: montserrat;
+        font-weight: 400;
+        color: var(--secondary-text-color);
+        opacity: 0.7;
+      }
     `;
     }
   
     getCardSize() {
-      if (this._useFixedHeight) {
-        const baseRows = this.config.show_header ? 1 : 0;
-        return baseRows + Math.ceil(this.config.max_height / 50);
-      } else {
-        return this.config.show_header ? 4 : 3;
+      if (this.config.hide_lyrics_container) {
+        return this.config.show_header ? 1 : 0;
       }
+      
+      if (this.config.grid_options && this.config.grid_options.rows) {
+        return this.config.grid_options.rows;
+      }
+      
+      const baseRows = this.config.show_header ? 1 : 0;
+      return baseRows + 1;
     }
 
   _handleVisibilityChange() {
@@ -2170,7 +2360,7 @@ import {
     return {
       columns: this.config.grid_options?.columns || 12,
       rows: this.config.grid_options?.rows || 6,
-      min_rows: 3
+      min_rows: 1
     };
   }
 
@@ -2471,7 +2661,14 @@ class NeteaseLyricsCardEditor extends LitElement {
                           .checked=${this._config.hide_lyrics_container ?? false}
                           @change=${this._toggleHideLyricsContainer}
                         ></ha-switch>
-                        <span class="option-label">隐藏歌词容器</span>
+                        <span class="option-label">显示单播放器</span>
+                      </div>
+                      <div class="option-item">
+                        <ha-switch
+                          .checked=${this._config.show_player_name ?? false}
+                          @change=${this._togglePlayerName}
+                        ></ha-switch>
+                        <span class="option-label">显示播放器名称</span>
                       </div>
                     </div>
                   </div>
@@ -2694,6 +2891,21 @@ class NeteaseLyricsCardEditor extends LitElement {
         --mdc-theme-secondary: white;
       }
     `;
+  }
+
+  _togglePlayerName(ev) {
+    const newConfig = {
+      ...this._config,
+      show_player_name: ev.target.checked
+    };
+
+    const event = new CustomEvent("config-changed", {
+      bubbles: true,
+      composed: true,
+      detail: { config: newConfig }
+    });
+    this.dispatchEvent(event);
+    this._config = newConfig;
   }
 }
 
