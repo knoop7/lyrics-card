@@ -5,13 +5,13 @@ console.info(
 );
 
 import {
-  LitElement,
-  html,
-  css,
+    LitElement,
+    html,
+    css,
   unsafeCSS
-} from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
-
-const logger = {
+  } from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
+  
+  const logger = {
   info(msg) {
     console.log(`%c♪ %c${msg}`, 'color: #1DB954; font-weight: bold;', 'color: #666; font-style: italic;');
   },
@@ -21,16 +21,16 @@ const logger = {
 };
 
 
-
-class NeteaseLyricsCard extends LitElement {
-  static get properties() {
-    return {
-      hass: { type: Object },
-      config: { type: Object },
-      _lyrics: { type: Array },
-      _currentIndex: { type: Number },
-      _currentSong: { type: String },
-      _currentArtist: { type: String },
+  
+  class NeteaseLyricsCard extends LitElement {
+    static get properties() {
+      return {
+        hass: { type: Object },
+        config: { type: Object },
+        _lyrics: { type: Array },
+        _currentIndex: { type: Number },
+        _currentSong: { type: String },
+        _currentArtist: { type: String },
       _musicSource: { type: String },
       _currentLyricProgress: { type: Number },
       _defaultDuration: { type: Number },
@@ -41,16 +41,17 @@ class NeteaseLyricsCard extends LitElement {
       _isInitialUpdate: { type: Boolean },
       _showSettings: { type: Boolean },
       _lyricsSettings: { type: Object },
-      _repeatMode: { type: String }
-    };
-  }
-
-  constructor() {
-    super();
-    this._lyrics = [];
-    this._currentIndex = -1;
-    this._currentSong = "";
-    this._currentArtist = "";
+      _repeatMode: { type: String },
+      _hasLayoutSupport: { type: Boolean }
+      };
+    }
+  
+    constructor() {
+      super();
+      this._lyrics = [];
+      this._currentIndex = -1;
+      this._currentSong = "";
+      this._currentArtist = "";
     this._rafId = null;
     this._lastUpdateTime = 0;
     this._lastScrollTime = 0;
@@ -68,6 +69,21 @@ class NeteaseLyricsCard extends LitElement {
     this._lyricsSettings = this._loadLyricsSettings();
     this._bindSettingsEvents();
     this._repeatMode = this._loadRepeatMode();
+    
+    this._hasLayoutSupport = false;
+    this._checkLayoutSupport();
+  }
+
+  _checkLayoutSupport() {
+    try {
+      const panel = document.querySelector('home-assistant').shadowRoot.querySelector('home-assistant-main').shadowRoot.querySelector('partial-panel-resolver');
+      if (panel) {
+        const view = panel.shadowRoot.querySelector('ha-panel-lovelace');
+        this._hasLayoutSupport = view && typeof view.lovelace !== 'undefined';
+      }
+    } catch (e) {
+      this._hasLayoutSupport = false;
+    }
   }
 
   _initCache() {
@@ -94,12 +110,12 @@ class NeteaseLyricsCard extends LitElement {
     } catch (e) {
       logger.error('保存缓存失败:', e);
     }
-  }
-
-  setConfig(config) {
-    if (!config.entity) {
-      throw new Error("请设置媒体播放器实体");
     }
+  
+    setConfig(config) {
+      if (!config.entity) {
+        throw new Error("请设置媒体播放器实体");
+      }
     this.config = {
       ...config,
       show_background: config.show_background ?? true,
@@ -107,6 +123,7 @@ class NeteaseLyricsCard extends LitElement {
       show_karaoke: config.show_karaoke ?? true,
       show_floating_lyrics: config.show_floating_lyrics ?? false,
       hide_lyrics_container: config.hide_lyrics_container ?? false,
+      max_height: config.max_height ?? 400,
       grid_options: config.grid_options ?? { columns: 12, rows: 6 },
       view_layout: config.view_layout ?? {}
     };
@@ -134,8 +151,8 @@ class NeteaseLyricsCard extends LitElement {
         break;
       }
     }
-
-    if (newIndex === -1) {
+  
+      if (newIndex === -1) {
       newIndex = this._lyrics.length - 1;
     }
 
@@ -147,17 +164,17 @@ class NeteaseLyricsCard extends LitElement {
       const duration = nextLyric.time - lyric.time;
       return Math.max(0, Math.min(1, (timeMs - lyric.time) / duration));
     };
-
-    if (this._currentIndex !== newIndex) {
-      const newLyric = this._lyrics[newIndex];
+  
+      if (this._currentIndex !== newIndex) {
+        const newLyric = this._lyrics[newIndex];
       const nextLyric = this._lyrics[newIndex + 1];
-      if (newLyric) {
+        if (newLyric) {
         this._currentLyricProgress = updateProgress(newLyric, nextLyric);
-      this._currentIndex = newIndex;
-      this.requestUpdate();
+        this._currentIndex = newIndex;
+        this.requestUpdate();
         
         requestAnimationFrame(() => {
-      this.updateScroll();
+        this.updateScroll();
         });
       }
     } else if (this._currentIndex >= 0) {
@@ -165,20 +182,20 @@ class NeteaseLyricsCard extends LitElement {
       const nextLyric = this._lyrics[this._currentIndex + 1];
       this._currentLyricProgress = updateProgress(currentLyric, nextLyric);
       this.requestUpdate();
+      }
     }
-  }
-
-  updateScroll() {
+  
+    updateScroll() {
     const now = performance.now();
     if (now - this._lastScrollTime < 16) {
       return;
     }
     this._lastScrollTime = now;
 
-    const container = this.shadowRoot.querySelector('.lyrics-container');
-    const activeElement = this.shadowRoot.querySelector('.lyric.active');
-    
-    if (container && activeElement) {
+      const container = this.shadowRoot.querySelector('.lyrics-container');
+      const activeElement = this.shadowRoot.querySelector('.lyric.active');
+      
+      if (container && activeElement) {
       const containerHeight = container.offsetHeight;
       const elementHeight = activeElement.offsetHeight;
       
@@ -197,16 +214,16 @@ class NeteaseLyricsCard extends LitElement {
         });
       } else {
         container.style.scrollBehavior = 'auto';
-      container.scrollTop = targetScroll;
+        container.scrollTop = targetScroll;
+      }
       }
     }
-  }
-
-  async updated(changedProps) {
-    if (changedProps.has("hass")) {
-      const state = this.hass.states[this.config.entity];
-      
-      if (state) {
+  
+    async updated(changedProps) {
+      if (changedProps.has("hass")) {
+        const state = this.hass.states[this.config.entity];
+        
+        if (state) {
         if (state.attributes.shuffle !== undefined && state.attributes.repeat) {
           let repeatMode;
           
@@ -231,12 +248,12 @@ class NeteaseLyricsCard extends LitElement {
           }
         }
         
-        const newSong = state.attributes.media_title;
-        const newArtist = state.attributes.media_artist;
-        const isPlaying = state.state === 'playing';
-        
-        if (newSong && newArtist && 
-            (newSong !== this._currentSong || newArtist !== this._currentArtist)) {
+          const newSong = state.attributes.media_title;
+          const newArtist = state.attributes.media_artist;
+          const isPlaying = state.state === 'playing';
+          
+          if (newSong && newArtist && 
+              (newSong !== this._currentSong || newArtist !== this._currentArtist)) {
           const now = Date.now();
           for (const [key, value] of this._lyricsCache.entries()) {
             if (now - value.timestamp > 3600000) {
@@ -245,16 +262,16 @@ class NeteaseLyricsCard extends LitElement {
           }
           this._saveCache();
           
-          this._currentSong = newSong;
-          this._currentArtist = newArtist;
-          await this.searchAndFetchLyrics(newSong, newArtist);
-        }
-
+            this._currentSong = newSong;
+            this._currentArtist = newArtist;
+            await this.searchAndFetchLyrics(newSong, newArtist);
+          }
+  
         if (isPlaying && !this._rafId) {
           this.startTimer();
         } else if (!isPlaying && this._rafId) {
-          this.stopTimer();
-        }
+            this.stopTimer();
+          }
 
         
         requestAnimationFrame(() => {
@@ -278,15 +295,15 @@ class NeteaseLyricsCard extends LitElement {
   }
 
   startTimer() {
-    this.stopTimer();
+      this.stopTimer();
     if (document.hidden) {
       this._switchToIntervalTimer();
     } else {
       this._switchToAnimationFrame();
     }
-  }
-
-  stopTimer() {
+    }
+  
+    stopTimer() {
     if (this._rafId) {
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
@@ -294,12 +311,12 @@ class NeteaseLyricsCard extends LitElement {
     if (this._intervalId) {
       clearInterval(this._intervalId);
       this._intervalId = null;
+      }
     }
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this.stopTimer();
+  
+    disconnectedCallback() {
+      super.disconnectedCallback();
+      this.stopTimer();
     document.removeEventListener('visibilitychange', this._visibilityHandler);
   }
 
@@ -331,7 +348,7 @@ class NeteaseLyricsCard extends LitElement {
 
           
           if (response.ok) {
-      const data = await response.json();
+        const data = await response.json();
             if (!data.lyrics) {
               throw new Error('未找到歌词');
             }
@@ -350,7 +367,7 @@ class NeteaseLyricsCard extends LitElement {
           }
 
           lastError = new Error(`请求失败: ${response.status}`);
-    } catch (error) {
+      } catch (error) {
           lastError = error;
           
           if (attempt < maxRetries - 1) {
@@ -364,13 +381,13 @@ class NeteaseLyricsCard extends LitElement {
       throw lastError || new Error('获取歌词失败');
     } catch (error) {
       
-      logger.error(`获取歌词失败: ${error.message}`);
+        logger.error(`获取歌词失败: ${error.message}`);
       throw error;
+      }
     }
-  }
-
-  async searchAndFetchLyrics(title, artist) {
-    try {
+  
+    async searchAndFetchLyrics(title, artist) {
+      try {
       const cleanTitle = title.replace(/\(.*?\)|\[.*?\]|（.*?）/g, '').trim();
       
       if (Array.isArray(artist)) {
@@ -505,9 +522,9 @@ class NeteaseLyricsCard extends LitElement {
       }
 
       throw new Error('未找到歌词');
-    } catch (error) {
-      logger.error(`搜索歌曲失败: ${error.message}`);
-      this._lyrics = [{ time: 0, text: "搜索歌曲失败" }];
+      } catch (error) {
+        logger.error(`搜索歌曲失败: ${error.message}`);
+        this._lyrics = [{ time: 0, text: "搜索歌曲失败" }];
       
       const searchTitle = title.replace(/\(.*?\)|\[.*?\]|（.*?）/g, '').trim();
       const searchArtist = typeof artist === 'string' ? artist.replace(/\(.*?\)|\[.*?\]|（.*?）/g, '').trim() : 
@@ -519,9 +536,9 @@ class NeteaseLyricsCard extends LitElement {
         this._saveCache();
       }
       
-      this.requestUpdate();
+        this.requestUpdate();
+      }
     }
-  }
 
   parseLyrics(lrcText) {
     if (!lrcText) return [];
@@ -578,32 +595,36 @@ class NeteaseLyricsCard extends LitElement {
     logger.info(`歌曲节奏: ${songTempo}, 平均间隔: ${Math.round(averageInterval)}ms`);
     return lyrics;
   }
-
-  render() {
-    const state = this.hass.states[this.config.entity];
+  
+    render() {
+      const state = this.hass.states[this.config.entity];
     
-    if (!state) {
-      return html`
-        <ha-card>
-          <div class="empty-state">
-            <ha-icon icon="mdi:help-circle-outline" class="empty-state-icon"></ha-icon>
-            <div class="empty-state-text">
-              <div class="empty-state-title">未找到媒体播放器</div>
-              <div class="empty-state-subtitle">请在配置中设置正确的媒体播放器实体</div>
+      const heightStyle = !this._hasLayoutSupport ? `max-height: ${this.config.max_height}px; overflow-y: auto;` : '';
+      
+      if (!state) {
+        return html`
+          <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
+            '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+            '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}">
+            <div class="empty-state">
+              <ha-icon icon="mdi:help-circle-outline" class="empty-state-icon"></ha-icon>
+              <div class="empty-state-text">
+                <div class="empty-state-title">未找到媒体播放器</div>
+                <div class="empty-state-subtitle">请在配置中设置正确的媒体播放器实体</div>
+              </div>
             </div>
-          </div>
-        </ha-card>`;
-    }
-
-    const position = state.attributes.media_position || 0;
-    const positionUpdatedAt = new Date(state.attributes.media_position_updated_at).getTime();
+          </ha-card>`;
+      }
+  
+      const position = state.attributes.media_position || 0;
+      const positionUpdatedAt = new Date(state.attributes.media_position_updated_at).getTime();
     const timeDiff = Math.max(0, (Date.now() - positionUpdatedAt) / 1000);
-    const duration = state.attributes.media_duration || 0;
+      const duration = state.attributes.media_duration || 0;
     
-    const currentPosition = Math.min(
-      position + (state.state === 'playing' ? timeDiff : 0),
-      duration
-    );
+      const currentPosition = Math.min(
+        position + (state.state === 'playing' ? timeDiff : 0),
+        duration
+      );
     
     if (!state.attributes.media_title) {
       return html`
@@ -681,13 +702,13 @@ class NeteaseLyricsCard extends LitElement {
         </div>
       </ha-card>`;
     }
-    
-    if (state.state === 'playing') {
-      this.updateCurrentLyricIndex(currentPosition);
-    }
-
+      
+      if (state.state === 'playing') {
+        this.updateCurrentLyricIndex(currentPosition);
+      }
+  
     if (this._lyrics.length === 0) {
-    return html`
+      return html`
       <ha-card style="${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}">
@@ -699,7 +720,7 @@ class NeteaseLyricsCard extends LitElement {
         ` : ''}
         <div class="card-container">
           <div class="header-container">
-        <div class="card-header">
+          <div class="card-header">
               ${state.attributes.entity_picture ? html`
                 <div class="cover-image-container" @click=${() => this._showMoreInfo()}>
                   <div 
@@ -712,14 +733,14 @@ class NeteaseLyricsCard extends LitElement {
                   ></div>
                 </div>
               ` : ''}
-          <div class="song-info">
+            <div class="song-info">
                 <div class="title-container">
-            <div class="title">${state.attributes.media_title || "未知歌曲"}</div>
+              <div class="title">${state.attributes.media_title || "未知歌曲"}</div>
                 </div>
                 <div class="artist-container">
-            <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+              <div class="artist">${state.attributes.media_artist || "未知艺术家"}</div>
+            </div>
           </div>
-        </div>
               <div class="media-controls">
                 <button 
                   class="control-button" 
@@ -906,26 +927,26 @@ class NeteaseLyricsCard extends LitElement {
           ` : ''}
           ${!this.config.hide_lyrics_container ? html`
             <div class="content-container ${!this.config.show_header ? 'no-header' : ''}">
-        <div class="card-content">
+          <div class="card-content">
                 <div class="lyrics-container ${!this.config.show_header ? 'no-header' : ''}">
           <div class="lyrics-top-spacer"></div>
-            ${this._lyrics.map((lyric, index) => html`
+              ${this._lyrics.map((lyric, index) => html`
                     <div 
                       class="lyric ${index === this._currentIndex ? 'active' : ''}"
                       style="${index === this._currentIndex && this.config.show_karaoke ? 
                         `--progress: ${this._currentLyricProgress * 100}%` : ''}"
                     >
-                ${lyric.text}
-              </div>
-            `)}
-                  <div class="lyrics-spacer"></div>
-          </div>
+                  ${lyric.text}
+                </div>
+              `)}
+              <div class="lyrics-spacer"></div>
+            </div>
               </div>
             </div>
           ` : ''}
-        </div>
-      </ha-card>
-    `;
+          </div>
+        </ha-card>
+      `;
 
     if (this.config.show_floating_lyrics && this._lyrics.length > 0 && this._currentIndex >= 0) {
       const currentLyric = this._lyrics[this._currentIndex];
@@ -973,13 +994,13 @@ class NeteaseLyricsCard extends LitElement {
     }
 
     return existingTemplate;
-  }
-
-  static get styles() {
+    }
+  
+    static get styles() {
     const defaultHeight = '150';
     const previewHeight = '150';
     
-    return css`
+      return css`
       :host {
         --lyrics-font: '黑体', 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 
                      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
@@ -987,21 +1008,21 @@ class NeteaseLyricsCard extends LitElement {
                      "Segoe UI Symbol", "Noto Color Emoji";
       }
       
-      :host {
-        display: block;
+        :host {
+          display: block;
         height: 100%;
-      }
-      ha-card {
+        }
+        ha-card {
         padding: 8px 16px;
         height: ${unsafeCSS('var(--card-height, 100%)')};
         min-height: ${unsafeCSS('var(--card-min-height, auto)')};
         width: ${unsafeCSS(window.location.pathname.includes("config/dashboard") ? `${previewHeight}px` : 'auto')};
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        background: var(--ha-card-background, var(--card-background-color, white));
-        border-radius: 20px;
-        box-shadow: var(--ha-card-box-shadow, none);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          background: var(--ha-card-background, var(--card-background-color, white));
+          border-radius: 20px;
+          box-shadow: var(--ha-card-box-shadow, none);
         position: relative;
       }
       
@@ -1047,7 +1068,7 @@ class NeteaseLyricsCard extends LitElement {
       }
 
       .header-container {
-        flex-shrink: 0;
+          flex-shrink: 0;
         padding: 8px 0px 12px 0px;
         border-bottom: ${unsafeCSS('var(--show-border, 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12))')};
       }
@@ -1064,8 +1085,8 @@ class NeteaseLyricsCard extends LitElement {
       }
 
       .card-header {
-        position: relative;
-        z-index: 2;
+          position: relative;
+          z-index: 2;
         display: grid;
         grid-template-areas: "i info controls";
         grid-template-columns: min-content minmax(0, 1fr) auto;
@@ -1075,9 +1096,9 @@ class NeteaseLyricsCard extends LitElement {
         padding: 0 16px;
       }
 
-      .song-info {
+        .song-info {
         grid-area: info;
-        display: flex;
+          display: flex;
         flex-direction: column;
         align-items: flex-start;
         gap: 2px;
@@ -1085,7 +1106,7 @@ class NeteaseLyricsCard extends LitElement {
         max-width: none;
         padding: 0 16px;
         margin: 0;
-        justify-content: center;
+          justify-content: center;
       }
 
       .text-container {
@@ -1108,31 +1129,31 @@ class NeteaseLyricsCard extends LitElement {
         text-align: left;
       }
 
-      .title {
+        .title {
         font-size: 15px;
-        font-weight: 600;
+          font-weight: 600;
         font-family: montserrat;
         color: var(--primary-text-color);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         padding: 0;
         line-height: 1.2;
-      }
+        }
 
-      .artist {
+        .artist {
         font-size: 12px;
         font-family: montserrat;
         font-weight: 400;
-        color: var(--secondary-text-color);
+          color: var(--secondary-text-color);
         opacity: 0.7;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         line-height: 1.2;
-      }
+        }
 
-      .artist::before {
+        .artist::before {
         content: none;
       }
 
@@ -1140,7 +1161,7 @@ class NeteaseLyricsCard extends LitElement {
         grid-area: i;
         width: 3.2rem;
         height: 3.2rem;
-        position: relative;
+          position: relative;
         cursor: pointer;
       }
 
@@ -1156,7 +1177,7 @@ class NeteaseLyricsCard extends LitElement {
       }
       
       .progress-ring {
-        position: absolute;
+          position: absolute;
         inset: -1px;
         border-radius: 8px;
         background: conic-gradient(
@@ -1166,7 +1187,7 @@ class NeteaseLyricsCard extends LitElement {
           rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05) calc(var(--progress, 0) * 360deg),
           rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05) 360deg
         );
-        z-index: 1;
+          z-index: 1;
         opacity: 0.7;
         transition: opacity 0.2s ease;
         clip-path: inset(0 round 8px);
@@ -1187,16 +1208,16 @@ class NeteaseLyricsCard extends LitElement {
         padding: 8px 0;
       }
       .card-content::before,
-      .card-content::after {
+        .card-content::after {
         content: none;
-      }
-      .lyrics-container {
-        height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        position: relative;
+        }
+        .lyrics-container {
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          position: relative;
         scroll-behavior: smooth;
         will-change: scroll-position;
         -webkit-overflow-scrolling: touch;
@@ -1219,29 +1240,29 @@ class NeteaseLyricsCard extends LitElement {
       }
       .lyrics-container.no-header {
         padding-top: 2px;
-      }
-      .lyrics-container::-webkit-scrollbar {
-        display: none;
-      }
-      .lyric {
+        }
+        .lyrics-container::-webkit-scrollbar {
+          display: none;
+        }
+        .lyric {
         padding: 10px 16px;
-        text-align: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        line-height: 1.5;
-        font-size: 15px;
-        font-weight: 400;
-        letter-spacing: -0.2px;
-        transform: scale(0.98);
+          text-align: center;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          line-height: 1.5;
+          font-size: 15px;
+          font-weight: 400;
+          letter-spacing: -0.2px;
+          transform: scale(0.98);
         color: var(--secondary-text-color);
         opacity: 0.6;
-      }
-      .lyric.active {
-        opacity: 1;
-        font-size: 17px;
-        font-weight: 600;
-        transform: scale(1);
+        }
+        .lyric.active {
+          opacity: 1;
+          font-size: 17px;
+          font-weight: 600;
+          transform: scale(1);
         padding: 10px 26px;
-        letter-spacing: -0.3px;
+          letter-spacing: -0.3px;
         color: var(--primary-color);
       }
       .lyric.active[style*="--progress"] {
@@ -1262,11 +1283,11 @@ class NeteaseLyricsCard extends LitElement {
       .lyrics-top-spacer {
         height: 16px;
         flex-shrink: 0;
-      }
-      .lyrics-spacer {
-        height: 50px;
-        flex-shrink: 0;
-      }
+        }
+        .lyrics-spacer {
+          height: 50px;
+          flex-shrink: 0;
+        }
       .empty-state {
         display: flex;
         flex-direction: column;
@@ -1591,12 +1612,23 @@ class NeteaseLyricsCard extends LitElement {
       .shuffle-button ha-icon {
         --mdc-icon-size: 22px;
       }
+      
+      ha-card.legacy-mode {
+        max-height: var(--max-height, 400px);
+        overflow-y: auto;
+      }
     `;
-  }
-
-  getCardSize() {
-    return this.config.show_header ? 4 : 3;
-  }
+    }
+  
+    getCardSize() {
+      if (this._hasLayoutSupport) {
+        return this.config.show_header ? 4 : 3;
+      } else {
+        const baseSize = this.config.show_header ? 1 : 0;
+        const maxHeight = this.config.max_height || 400;
+        return baseSize + Math.ceil(maxHeight / 100);
+      }
+    }
 
   _handleVisibilityChange() {
     if (document.hidden) {
@@ -2443,17 +2475,17 @@ class NeteaseLyricsCardEditor extends LitElement {
 }
 
 if (!customElements.get('netease-lyrics-card')) {
-customElements.define("netease-lyrics-card", NeteaseLyricsCard);
+  customElements.define("netease-lyrics-card", NeteaseLyricsCard);
 }
 
 if (!customElements.get('netease-lyrics-card-editor')) {
   customElements.define("netease-lyrics-card-editor", NeteaseLyricsCardEditor);
 }
-
-window.customCards = window.customCards || [];
+  
+  window.customCards = window.customCards || [];
 if (!window.customCards.some(card => card.type === 'netease-lyrics-card')) {
-window.customCards.push({
-  type: "netease-lyrics-card",
+  window.customCards.push({
+    type: "netease-lyrics-card",
     name: "歌词lyrics",
     description: "优雅的音乐歌词卡片",
     preview: true,
