@@ -2,6 +2,8 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
+<img width="562" alt="2025-04-27 10 26 12" src="https://github.com/user-attachments/assets/9475b8dc-7f06-4faa-9c83-8f3c12a7d9aa" />
+
 Home Assistant 音乐歌词显示卡片，支持智能搜索、卡拉OK效果和浮动歌词功能。
 
 ## 功能特点
