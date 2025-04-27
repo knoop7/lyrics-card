@@ -6,8 +6,19 @@ import time
 import shutil
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.frontend import add_extra_js_url
+
+try:
+    from homeassistant.components.http.static import StaticPathConfig
+except ImportError:
+    try:
+        from homeassistant.components.http import StaticPathConfig
+    except ImportError:
+        class StaticPathConfig:
+            def __init__(self, url_path, path, cache_headers):
+                self.url_path = url_path
+                self.path = path
+                self.cache_headers = cache_headers
 
 from .const import DOMAIN
 from .api import NeteaseLyricsView
@@ -18,15 +29,27 @@ async def async_setup_lyrics_card(hass: HomeAssistant) -> bool:
     version = int(time.time())
     lyrics_card_path = '/netease_lyrics-local'
     
-    await hass.http.async_register_static_paths([
-        StaticPathConfig(
-            lyrics_card_path, 
-            hass.config.path('custom_components/netease_lyrics/frontend'), 
-            False
-        )
-    ])
+    try:
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(
+                lyrics_card_path, 
+                hass.config.path('custom_components/netease_lyrics/frontend'), 
+                False
+            )
+        ])
+    except (AttributeError, TypeError) as e:
+        _LOGGER.info("使用备用方法注册静态路径: %s", str(e))
+        try:
+            hass.http.register_static_path(
+                lyrics_card_path,
+                hass.config.path('custom_components/netease_lyrics/frontend'),
+                False
+            )
+        except Exception as e:
+            _LOGGER.info("无法注册静态路径: %s", str(e))
+            return False
     
-    _LOGGER.debug("register_static_path: %s", lyrics_card_path)
+    _LOGGER.info("register_static_path: %s", lyrics_card_path)
     add_extra_js_url(hass, lyrics_card_path + f"/netease-lyrics-card.js?ver={version}")
     
     try:
