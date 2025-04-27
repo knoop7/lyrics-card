@@ -42,7 +42,11 @@ import {
       _showSettings: { type: Boolean },
       _lyricsSettings: { type: Object },
       _repeatMode: { type: String },
-      _useFixedHeight: { type: Boolean }
+      _useFixedHeight: { type: Boolean },
+      _showFontSizeSlider: { type: Boolean },
+      _lyricFontSize: { type: Number },
+      _lyricFontSizeActive: { type: Number },
+      _longPressTimer: { type: Object }
       };
     }
   
@@ -70,6 +74,11 @@ import {
     this._bindSettingsEvents();
     this._repeatMode = this._loadRepeatMode();
     this._useFixedHeight = this._shouldUseFixedHeight();
+    this._showFontSizeSlider = false;
+    this._lyricFontSize = this._loadLyricFontSize();
+    this._lyricFontSizeActive = this._loadLyricFontSizeActive();
+    this._longPressTimer = null;
+    this._bindLyricsFontSizeEvents();
   }
 
   _checkFixedHeight() {
@@ -123,10 +132,13 @@ import {
       hide_lyrics_container: config.hide_lyrics_container ?? false,
       grid_options: config.grid_options ?? { columns: 12, rows: 6 },
       view_layout: config.view_layout ?? {},
-      max_height: config.max_height ?? 450
+      max_height: config.max_height ?? 450,
+      lyric_font_size: config.lyric_font_size ?? 15
     };
     
     this._useFixedHeight = this._shouldUseFixedHeight();
+    this._lyricFontSize = this._loadLyricFontSize() || this.config.lyric_font_size;
+    this._lyricFontSizeActive = this._loadLyricFontSizeActive() || (this.config.lyric_font_size + 2);
   }
 
   updateCurrentLyricIndex(currentTime) {
@@ -931,19 +943,45 @@ import {
           ${!this.config.hide_lyrics_container ? html`
             <div class="content-container ${!this.config.show_header ? 'no-header' : ''}">
           <div class="card-content">
-                <div class="lyrics-container ${!this.config.show_header ? 'no-header' : ''}">
-          <div class="lyrics-top-spacer"></div>
-              ${this._lyrics.map((lyric, index) => html`
+                <div 
+                  class="lyrics-container ${!this.config.show_header ? 'no-header' : ''}"
+                  @touchstart=${(e) => {
+                    this._longPressTimer = setTimeout(() => {
+                      this._handleLyricsLongPress(e);
+                    }, 800);
+                  }}
+                  @mousedown=${(e) => {
+                    this._longPressTimer = setTimeout(() => {
+                      this._handleLyricsLongPress(e);
+                    }, 800);
+                  }}
+                  @touchend=${() => {
+                    clearTimeout(this._longPressTimer);
+                  }}
+                  @mouseup=${() => {
+                    clearTimeout(this._longPressTimer);
+                  }}
+                  @touchmove=${() => {
+                    clearTimeout(this._longPressTimer);
+                  }}
+                  @mousemove=${() => {
+                    clearTimeout(this._longPressTimer);
+                  }}
+                >
+                  <div class="lyrics-top-spacer"></div>
+                  ${this._showFontSizeSlider ? this._renderFontSizeSlider() : ''}
+                  ${this._lyrics.map((lyric, index) => html`
                     <div 
                       class="lyric ${index === this._currentIndex ? 'active' : ''}"
-                      style="${index === this._currentIndex && this.config.show_karaoke ? 
-                        `--progress: ${this._currentLyricProgress * 100}%` : ''}"
+                      style="${index === this._currentIndex ? 
+                        `--progress: ${this._currentLyricProgress * 100}%; font-size: ${this._lyricFontSizeActive}px;` : 
+                        `font-size: ${this._lyricFontSize}px;`}"
                     >
-                  ${lyric.text}
+                      ${lyric.text}
+                    </div>
+                  `)}
+                  <div class="lyrics-spacer"></div>
                 </div>
-              `)}
-              <div class="lyrics-spacer"></div>
-            </div>
               </div>
             </div>
           ` : ''}
@@ -996,7 +1034,7 @@ import {
       return html`${existingTemplate}${floatingLyrics}${this._renderSettingsDialog()}`;
     }
 
-    return existingTemplate;
+    return html`${existingTemplate}`;
     }
   
     static get styles() {
@@ -1009,7 +1047,7 @@ import {
                      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
                      sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
                      "Segoe UI Symbol", "Noto Color Emoji";
-        --card-max-height: 450px;
+        --card-max-height: 400px;
       }
       
         :host {
@@ -1254,24 +1292,22 @@ import {
           display: none;
         }
         .lyric {
-        padding: 12px 16px;
-          text-align: center;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          line-height: 1.5;
-          font-size: 15px;
-          font-weight: 400;
-          letter-spacing: -0.2px;
-          transform: scale(0.98);
+        padding: 10px 16px;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        line-height: 1.5;
+        font-weight: 400;
+        letter-spacing: -0.2px;
+        transform: scale(0.95);
         color: var(--secondary-text-color);
         opacity: 0.6;
-        }
-        .lyric.active {
-          opacity: 1;
-          font-size: 17px;
-          font-weight: 600;
-          transform: scale(1);
+      }
+      .lyric.active {
+        opacity: 1;
+        font-weight: 600;
+        transform: scale(1.05);
         padding: 10px 26px;
-          letter-spacing: -0.3px;
+        letter-spacing: -0.1px;
         color: var(--primary-color);
       }
       .lyric.active[style*="--progress"] {
@@ -1625,6 +1661,81 @@ import {
       ha-card.legacy-mode {
         max-height: var(--max-height, 400px);
         overflow-y: auto;
+      }
+
+      .font-size-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+
+      .font-size-slider-container {
+        width: 240px;
+        max-width: 80%;
+        margin: 0 auto 10px auto;
+        padding: 8px 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .font-size-slider {
+        width: 100%;
+        height: 6px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.1);
+        border-radius: 3px;
+        outline: none;
+      }
+
+      .font-size-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+
+      .font-size-slider::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+
+      .font-size-slider-wrapper {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: linear-gradient(to bottom, 
+          rgba(var(--rgb-card-background-color, 255, 255, 255), 0.8) 0%,
+          rgba(var(--rgb-card-background-color, 255, 255, 255), 0.8) 70%,
+          rgba(var(--rgb-card-background-color, 255, 255, 255), 0) 100%);
+        padding: 8px 0;
+        margin-bottom: 12px;
+      }
+
+      .preview-text {
+        text-align: center;
+        color: var(--primary-color);
+        padding: 8px 0;
+        font-weight: 500;
+        line-height: 1.4;
       }
     `;
     }
@@ -2158,6 +2269,75 @@ import {
         ?.querySelector('hui-grid-card-layout'));
     } catch (e) {
       return true;
+    }
+  }
+
+  _loadLyricFontSize() {
+    try {
+      const saved = localStorage.getItem('lyrics_font_size');
+      return saved ? parseInt(saved) : 15;
+    } catch (e) {
+      return 15;
+    }
+  }
+
+  _saveLyricFontSize(size) {
+    try {
+      localStorage.setItem('lyrics_font_size', size.toString());
+      // 确保活跃字体大小比非活跃大小大一些
+      localStorage.setItem('lyrics_font_size_active', (size + 2).toString());
+    } catch (e) {
+      logger.error('保存歌词字体大小失败:', e);
+    }
+  }
+
+  _bindLyricsFontSizeEvents() {
+    this._handleLyricsLongPress = this._handleLyricsLongPress.bind(this);
+    this._closeFontSizeSlider = this._closeFontSizeSlider.bind(this);
+  }
+
+  _handleLyricsLongPress(e) {
+    e.preventDefault();
+    this._showFontSizeSlider = true;
+    this.requestUpdate();
+  }
+
+  _closeFontSizeSlider() {
+    this._showFontSizeSlider = false;
+    this.requestUpdate();
+  }
+
+  _updateLyricFontSize(e) {
+    this._lyricFontSize = parseInt(e.target.value);
+    this._lyricFontSizeActive = this._lyricFontSize + 2;
+    this._saveLyricFontSize(this._lyricFontSize);
+    this.requestUpdate();
+  }
+
+  _renderFontSizeSlider() {
+    if (!this._showFontSizeSlider) return '';
+    
+    return html`
+      <div class="font-size-slider-container">
+        <input 
+          type="range" 
+          min="12" 
+          max="24"
+          step="1"
+          .value=${this._lyricFontSize}
+          @input=${this._updateLyricFontSize}
+          class="font-size-slider"
+        >
+      </div>
+    `;
+  }
+
+  _loadLyricFontSizeActive() {
+    try {
+      const saved = localStorage.getItem('lyrics_font_size_active');
+      return saved ? parseInt(saved) : (this._loadLyricFontSize() + 2);
+    } catch (e) {
+      return this._loadLyricFontSize() + 2;
     }
   }
 }
