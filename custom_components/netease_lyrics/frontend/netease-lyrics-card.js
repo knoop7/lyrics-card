@@ -1245,7 +1245,7 @@ import {
           display: none;
         }
         .lyric {
-        padding: 10px 16px;
+        padding: 12px 16px;
           text-align: center;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           line-height: 1.5;
@@ -2025,7 +2025,7 @@ import {
     return {
       columns: this.config.grid_options?.columns || 12,
       rows: this.config.grid_options?.rows || 6,
-      min_rows: 4
+      min_rows: 3
     };
   }
 
