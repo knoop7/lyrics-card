@@ -42,7 +42,7 @@ import {
       _showSettings: { type: Boolean },
       _lyricsSettings: { type: Object },
       _repeatMode: { type: String },
-      _hasLayoutSupport: { type: Boolean }
+      _useFixedHeight: { type: Boolean }
       };
     }
   
@@ -69,20 +69,18 @@ import {
     this._lyricsSettings = this._loadLyricsSettings();
     this._bindSettingsEvents();
     this._repeatMode = this._loadRepeatMode();
-    
-    this._hasLayoutSupport = false;
-    this._checkLayoutSupport();
+    this._useFixedHeight = this._shouldUseFixedHeight();
   }
 
-  _checkLayoutSupport() {
+  _checkFixedHeight() {
     try {
       const panel = document.querySelector('home-assistant').shadowRoot.querySelector('home-assistant-main').shadowRoot.querySelector('partial-panel-resolver');
       if (panel) {
         const view = panel.shadowRoot.querySelector('ha-panel-lovelace');
-        this._hasLayoutSupport = view && typeof view.lovelace !== 'undefined';
+        this._useFixedHeight = view && typeof view.lovelace !== 'undefined';
       }
     } catch (e) {
-      this._hasLayoutSupport = false;
+      this._useFixedHeight = false;
     }
   }
 
@@ -123,10 +121,12 @@ import {
       show_karaoke: config.show_karaoke ?? true,
       show_floating_lyrics: config.show_floating_lyrics ?? false,
       hide_lyrics_container: config.hide_lyrics_container ?? false,
-      max_height: config.max_height ?? 400,
       grid_options: config.grid_options ?? { columns: 12, rows: 6 },
-      view_layout: config.view_layout ?? {}
+      view_layout: config.view_layout ?? {},
+      max_height: config.max_height ?? 450
     };
+    
+    this._useFixedHeight = this._shouldUseFixedHeight();
   }
 
   updateCurrentLyricIndex(currentTime) {
@@ -599,13 +599,14 @@ import {
     render() {
       const state = this.hass.states[this.config.entity];
     
-      const heightStyle = !this._hasLayoutSupport ? `max-height: ${this.config.max_height}px; overflow-y: auto;` : '';
+      const heightStyle = this._useFixedHeight ? `max-height: ${this.config.max_height}px; overflow-y: auto;` : '';
       
       if (!state) {
         return html`
           <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
             '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
-            '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}">
+            '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
+            class="${this._useFixedHeight ? 'fixed-height' : ''}">
             <div class="empty-state">
               <ha-icon icon="mdi:help-circle-outline" class="empty-state-icon"></ha-icon>
               <div class="empty-state-text">
@@ -628,9 +629,10 @@ import {
     
     if (!state.attributes.media_title) {
       return html`
-        <ha-card style="${this.config.hide_lyrics_container ? 
+        <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
-          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}">
+          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
+          class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -709,9 +711,10 @@ import {
   
     if (this._lyrics.length === 0) {
       return html`
-      <ha-card style="${this.config.hide_lyrics_container ? 
+      <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
-          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}">
+          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
+          class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -783,9 +786,10 @@ import {
 
     if (this._lyrics.length === 1 && this._lyrics[0].text.includes("搜索歌曲失败")) {
       return html`
-        <ha-card style="${this.config.hide_lyrics_container ? 
+        <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
           '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
-          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}">
+          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
+          class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -861,11 +865,10 @@ import {
     }
 
     const existingTemplate = html`
-      <ha-card style="
-        ${this.config.hide_lyrics_container ? 
-          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
-          '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}
-      ">
+      <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
+        '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+        '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
+        class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
           <div 
             class="card-background"
@@ -1006,11 +1009,12 @@ import {
                      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
                      sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
                      "Segoe UI Symbol", "Noto Color Emoji";
+        --card-max-height: 450px;
       }
       
         :host {
           display: block;
-        height: 100%;
+          height: 100%;
         }
         ha-card {
         padding: 8px 16px;
@@ -1024,6 +1028,11 @@ import {
           border-radius: 20px;
           box-shadow: var(--ha-card-box-shadow, none);
         position: relative;
+      }
+      
+      ha-card.fixed-height {
+        max-height: var(--card-max-height);
+        overflow-y: auto;
       }
       
       .card-background {
@@ -1621,12 +1630,11 @@ import {
     }
   
     getCardSize() {
-      if (this._hasLayoutSupport) {
-        return this.config.show_header ? 4 : 3;
+      if (this._useFixedHeight) {
+        const baseRows = this.config.show_header ? 1 : 0;
+        return baseRows + Math.ceil(this.config.max_height / 50);
       } else {
-        const baseSize = this.config.show_header ? 1 : 0;
-        const maxHeight = this.config.max_height || 400;
-        return baseSize + Math.ceil(maxHeight / 100);
+        return this.config.show_header ? 4 : 3;
       }
     }
 
@@ -2135,6 +2143,21 @@ import {
         return 'mdi:shuffle';
       default:
         return 'mdi:repeat-off';
+    }
+  }
+
+  _shouldUseFixedHeight() {
+    try {
+      return !(document.querySelector('home-assistant')?.shadowRoot
+        ?.querySelector('home-assistant-main')?.shadowRoot
+        ?.querySelector('ha-panel-lovelace')?.shadowRoot
+        ?.querySelector('hui-root')?.shadowRoot
+        ?.querySelector('hui-view') ||
+        document.querySelector('hui-panel-view') ||
+        document.querySelector('hui-view')?.shadowRoot
+        ?.querySelector('hui-grid-card-layout'));
+    } catch (e) {
+      return true;
     }
   }
 }
