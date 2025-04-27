@@ -21,7 +21,7 @@ Home Assistant 音乐歌词显示卡片，支持智能搜索、卡拉OK效果和
 
 ### 前置条件
 
-- Home Assistant 2024.08 或更高版本
+- Home Assistant 2024.04 或更高版本
 - [HACS](https://hacs.xyz/) (推荐)
 
 ### 使用 HACS 安装（推荐）
@@ -31,15 +31,18 @@ Home Assistant 音乐歌词显示卡片，支持智能搜索、卡拉OK效果和
 3. 添加此存储库的 URL: `https://github.com/knoop7/lyrics-card`
 4. 选择类别为 "集成"
 5. 点击 "添加"
-6. 在 HACS 存储库列表中找到 "Lyrics Card"
+6. 在 HACS 存储库列表中找到 "Lyrics"
 7. 点击 "下载"
 
 ### 手动安装（部分无法正常使用卡片）
 
 1. 下载 `netease-lyrics-card.js` 文件
 2. 将文件放置在你的 Home Assistant 配置文件夹的 `/www/` 目录中
+3. 仪表盘 - 资源 - 添加
+   <img width="453" alt="2025-04-27 11 43 05" src="https://github.com/user-attachments/assets/c9c8a918-eba2-4fb9-aca1-cf3740c0a735" />
 
-
+4. 强制刷新浏览器
+5. 添加卡片
 
 ## 设置与配置
 
@@ -54,18 +57,6 @@ Home Assistant 音乐歌词显示卡片，支持智能搜索、卡拉OK效果和
 ```yaml
 type: custom:netease-lyrics-card
 entity: media_player.your_player
-```
-
-### 高级配置选项
-
-```yaml
-type: custom:netease-lyrics-card
-entity: media_player.your_player
-show_background: true      # 显示背景图片
-show_header: true          # 显示标题栏
-show_karaoke: true         # 启用卡拉OK效果
-show_floating_lyrics: true # 启用浮动歌词
-hide_lyrics_container: false # 隐藏固定歌词容器
 ```
 
 ## 自定义样式
