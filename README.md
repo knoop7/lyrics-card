@@ -38,12 +38,7 @@ Home Assistant 音乐歌词显示卡片，支持智能搜索、卡拉OK效果和
 
 1. 下载 `netease-lyrics-card.js` 文件
 2. 将文件放置在你的 Home Assistant 配置文件夹的 `/www/` 目录中
-3. 在 Lovelace 资源中添加以下内容:
-   ```yaml
-   resources:
-     - url: /local/netease-lyrics-card.js
-       type: module
-   ```
+
 
 
 ## 设置与配置
