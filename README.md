@@ -39,10 +39,13 @@ Home Assistant 音乐歌词显示卡片，支持智能搜索、卡拉OK效果和
 1. 下载 `netease-lyrics-card.js` 文件
 2. 将文件放置在你的 Home Assistant 配置文件夹的 `/www/` 目录中
 3. 仪表盘 - 资源 - 添加
+   
+   <br>
    <img width="453" alt="2025-04-27 11 43 05" src="https://github.com/user-attachments/assets/c9c8a918-eba2-4fb9-aca1-cf3740c0a735" />
-
-4. 强制刷新浏览器
-5. 添加卡片
+   <br>
+   
+5. 强制刷新浏览器
+6. 添加卡片
 
 ## 设置与配置
 
