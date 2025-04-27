@@ -1,0 +1,13 @@
+{
+    "domain": "netease_lyrics",
+    "name": "歌词lyrics",
+    "documentation": "https://github.com/knoop7/lyrics-card/issues",
+    "issue_tracker": "https://github.com/knoop7/issues-card",
+    "dependencies": ["http"],
+    "config_flow": true,
+    "codeowners": ["@knoop7"],
+    "requirements": ["aiohttp"],
+    "version": "1.2.0",
+    "iot_class": "cloud_polling"
+  }
+ 

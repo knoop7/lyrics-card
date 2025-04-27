@@ -1,0 +1,26 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "歌词选项",
+                "description": "选择音乐源",
+                "data": {
+                    "source": "音乐源"
+                }
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "仅允许一个实例"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "歌词选项",
+                "data": {
+                    "source": "音乐源"
+                }
+            }
+        }
+    }
+}
