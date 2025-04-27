@@ -616,7 +616,7 @@ import {
       if (!state) {
         return html`
           <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
-            '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+            '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
             '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
             class="${this._useFixedHeight ? 'fixed-height' : ''}">
             <div class="empty-state">
@@ -642,7 +642,7 @@ import {
     if (!state.attributes.media_title) {
       return html`
         <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
-          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
           class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
@@ -724,7 +724,7 @@ import {
     if (this._lyrics.length === 0) {
       return html`
       <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
-          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
           class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
@@ -734,7 +734,7 @@ import {
           ></div>
         ` : ''}
         <div class="card-container">
-          <div class="header-container">
+          <div class="header-container ${this.config.hide_lyrics_container ? 'no-lyrics' : ''}">
           <div class="card-header">
               ${state.attributes.entity_picture ? html`
                 <div class="cover-image-container" @click=${() => this._showMoreInfo()}>
@@ -799,7 +799,7 @@ import {
     if (this._lyrics.length === 1 && this._lyrics[0].text.includes("搜索歌曲失败")) {
       return html`
         <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
-          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+          '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
           '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
           class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
@@ -809,7 +809,7 @@ import {
           ></div>
         ` : ''}
         <div class="card-container">
-          <div class="header-container">
+          <div class="header-container ${this.config.hide_lyrics_container ? 'no-lyrics' : ''}">
             <div class="card-header">
               ${state.attributes.entity_picture ? html`
                 <div class="cover-image-container" @click=${() => this._showMoreInfo()}>
@@ -878,7 +878,7 @@ import {
 
     const existingTemplate = html`
       <ha-card style="${heightStyle} ${this.config.hide_lyrics_container ? 
-        '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -20px;' : 
+        '--card-height: fit-content; --container-height: auto; --show-border: none; padding-bottom: 8px; --background-top: -16px;' : 
         '--card-height: 100%; --container-height: 100%; --show-border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12); --background-top: 0;'}"
         class="${this._useFixedHeight ? 'fixed-height' : ''}">
         ${this.config.show_background && state.attributes.entity_picture ? html`
@@ -889,7 +889,7 @@ import {
         ` : ''}
         <div class="card-container">
           ${this.config.show_header ? html`
-            <div class="header-container">
+            <div class="header-container ${this.config.hide_lyrics_container ? 'no-lyrics' : ''}">
               <div class="card-header">
                 ${state.attributes.entity_picture ? html`
                   <div class="cover-image-container" @click=${() => this._showMoreInfo()}>
@@ -944,7 +944,7 @@ import {
             <div class="content-container ${!this.config.show_header ? 'no-header' : ''}">
           <div class="card-content">
                 <div 
-                  class="lyrics-container ${!this.config.show_header ? 'no-header' : ''}"
+                  class="lyrics-container ${!this.config.show_header ? 'no-header' : ''} ${this._useFixedHeight ? 'fixed-height' : ''}"
                   @touchstart=${(e) => {
                     this._longPressTimer = setTimeout(() => {
                       this._handleLyricsLongPress(e);
@@ -967,6 +967,7 @@ import {
                   @mousemove=${() => {
                     clearTimeout(this._longPressTimer);
                   }}
+                  style="${this._useFixedHeight ? 'max-height: 450px; overflow-y: auto;' : ''}"
                 >
                   <div class="lyrics-top-spacer"></div>
                   ${this._showFontSizeSlider ? this._renderFontSizeSlider() : ''}
@@ -1118,6 +1119,11 @@ import {
           flex-shrink: 0;
         padding: 8px 0px 12px 0px;
         border-bottom: ${unsafeCSS('var(--show-border, 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12))')};
+      }
+
+      .header-container.no-lyrics {
+        padding: 8px 0;
+        border-bottom: none;
       }
 
       .content-container {
@@ -1737,6 +1743,26 @@ import {
         font-weight: 500;
         line-height: 1.4;
       }
+      
+      .lyrics-container.fixed-height {
+        max-height: 450px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        -ms-overflow-style: none;
+      }
+      
+      .lyrics-container.fixed-height::-webkit-scrollbar {
+        width: 4px;
+      }
+      
+      .lyrics-container.fixed-height::-webkit-scrollbar-thumb {
+        background-color: rgba(var(--rgb-primary-color, 33, 150, 243), 0.4);
+        border-radius: 4px;
+      }
+      
+      .lyrics-container.fixed-height::-webkit-scrollbar-track {
+        background: transparent;
+      }
     `;
     }
   
@@ -2259,14 +2285,9 @@ import {
 
   _shouldUseFixedHeight() {
     try {
-      return !(document.querySelector('home-assistant')?.shadowRoot
-        ?.querySelector('home-assistant-main')?.shadowRoot
-        ?.querySelector('ha-panel-lovelace')?.shadowRoot
-        ?.querySelector('hui-root')?.shadowRoot
-        ?.querySelector('hui-view') ||
-        document.querySelector('hui-panel-view') ||
-        document.querySelector('hui-view')?.shadowRoot
-        ?.querySelector('hui-grid-card-layout'));
+      return typeof window.CSS.supports !== 'function' || 
+             !window.CSS.supports('grid-template-rows', '1fr') ||
+             !window.CSS.supports('display', 'grid');
     } catch (e) {
       return true;
     }
@@ -2284,7 +2305,6 @@ import {
   _saveLyricFontSize(size) {
     try {
       localStorage.setItem('lyrics_font_size', size.toString());
-      // 确保活跃字体大小比非活跃大小大一些
       localStorage.setItem('lyrics_font_size_active', (size + 2).toString());
     } catch (e) {
       logger.error('保存歌词字体大小失败:', e);
