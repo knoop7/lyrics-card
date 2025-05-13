@@ -7,7 +7,7 @@
     "config_flow": true,
     "codeowners": ["@knoop7"],
     "requirements": ["aiohttp"],
-    "version": "1.2.0",
+    "version": "1.2.5",
     "iot_class": "cloud_polling"
   }
  
