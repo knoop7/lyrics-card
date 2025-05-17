@@ -1,5 +1,6 @@
 {
     "name": "歌词lyrics",
     "render_readme": true,
+    "country": ["US","CN","TW","HK"],
     "homeassistant": "2024.04"
 }
